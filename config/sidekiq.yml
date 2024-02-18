@@ -1,0 +1,57 @@
+---
+:concurrency: 10
+development:
+  :concurrency: 20
+production:
+  :concurrency: 20
+:queues:
+  - recapitulations_0_crawler
+  - recapitulations_1_crawler
+  - recapitulations_2_crawler
+  - recapitulations_3_crawler
+  - recapitulations_4_crawler
+  - recapitulations_5_crawler
+  - recapitulations_6_crawler
+  - recapitulations_7_crawler
+  - recapitulations_8_crawler
+  - recapitulations_9_crawler
+  - recapitulations_10_crawler
+  - recapitulations_11_crawler
+  - recapitulations_12_crawler
+  - recapitulations_13_crawler
+  - recapitulations_14_crawler
+  - recapitulations_15_crawler
+  - recapitulations_16_crawler
+  - recapitulations_17_crawler
+  - recapitulations_18_crawler
+  - recapitulations_19_crawler
+  - recapitulations_20_crawler
+  - provinces_0_crawler
+  - states_0_crawler
+  - states_1_crawler
+  - districts_0_crawler
+  - districts_1_crawler
+  - districts_2_crawler
+  - districts_3_crawler
+  - villages_0_crawler
+  - villages_1_crawler
+  - villages_2_crawler
+  - villages_3_crawler
+  - villages_4_crawler
+  - villages_5_crawler
+  - polling_stations_0_crawler
+  - polling_stations_1_crawler
+  - polling_stations_2_crawler
+  - polling_stations_3_crawler
+  - polling_stations_4_crawler
+  - polling_stations_5_crawler
+  - polling_stations_6_crawler
+  - polling_stations_7_crawler
+  - polling_stations_8_crawler
+  - polling_stations_9_crawler
+  - polling_stations_10_crawler
+  - recapitulation_runner
+  - place_runner
+  - critical
+  - default
+  - low

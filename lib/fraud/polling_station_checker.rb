@@ -2,54 +2,96 @@
 
 module Fraud
   class PollingStationChecker
-    def self.check(max_voters = 300, mode: :max_voters, station_sample: 100, detail: true)
+    def self.check(max_voters = 300, comparator:, sample:, query: -> { all }, detail: true, skip_ids: [], save: false)
       # Fetch all recapitulations
-      recapitulations = recapitulations_by_mode(mode).limit(station_sample)
+      r13s = recapitulations(query, comparator).limit(sample)
+
+      # Fetch all presidents
+      presidents = President.where.not(:id.in => skip_ids.map(&:to_s))
+      presidents_by_id = presidents.index_by(&:id)
 
       # Initialize a hash to store the recapitulations grouped by president's name
-      grouped_recapitulations = Hash.new { |hash, key| hash[key] = [] }
+      grouped_recaps = Hash.new { |hash, key| hash[key] = [] }
 
       # Iterate over the recapitulations
-      recapitulations.each do |recapitulation|
+      r13s.each do |recapitulation|
         # Iterate over the keys in the 'chart' field
         recapitulation.chart.each do |key, value|
-          president = President.find(key)
+          president = presidents_by_id[key]
 
           # Exit chart iteration if the president is nil, or the value is less than 300
-          next unless president && data_fraud?(max_voters, recapitulation, value, mode)
+          next unless president && data_fraud?(max_voters, recapitulation, value, comparator)
 
           # Add the recapitulation to the group for this president
           # if the value is greater than 300 and a president was found
-          grouped_recapitulations[president.nama] << recapitulation.attributes
+          grouped_recaps[president.nama] << recapitulation.attributes
         end
       end
 
       # Convert the grouped recapitulations to an array of hashes
-      grouped_recapitulations.map do |president_name, recapitulations|
-        { president: president_name, fraud_mode: mode, fraud_count: recapitulations.count }.tap do |result|
+      results = grouped_recaps.map do |president, recapitulations|
+        { president:, comparator:, fraud_count: recapitulations.count }.tap do |result|
           result[:r13s] = recapitulations if detail.eql?(true)
-          result[:r13s] = recapitulations.map { |data| data.slice('images', 'frontend_url') } if detail.eql?(:urls_only)
-        end
+          result[:r13s] = selected_recapitulations(recapitulations, detail[:only]) if detail.is_a?(Hash)
+        end.deep_stringify_keys
+      end
+
+      save_to_db_or_file(results, save, comparator, sample) unless save.eql?(false)
+
+      results
+    end
+
+    # Private methods
+
+    def self.save_to_db_or_file(results, save, *args)
+      return save_to_db(results) if save[:to].eql?(:db)
+
+      save_to_file(results, save, *args)
+    end
+
+    def self.save_to_db(results)
+      results.each { |data| Fraud::PollingStation.create! data }
+    end
+
+    def self.save_to_file(results, save, comparator, sample)
+      filename = File.join(save[:path] || '.', saved_name(comparator, sample))
+      File.open(filename, 'w') { |file| file.write(results.to_json) }
+    end
+
+    def self.saved_name(comparator, sample)
+      ['fraud_checker', comparator, sample, Time.now.to_i].compact.join('_') + '.json'
+    end
+
+    def self.selected_recapitulations(recapitulations, options)
+      recapitulations.map { |data| data.slice(*options.map(&:to_s)) }
+    end
+
+    def self.data_fraud?(max_voters, recapitulation, president_votes_count, comparator)
+      raise 'Invalid Fraud Comparator' unless %i[max_voters valid_voters provisional_voters].include?(comparator)
+
+      president_votes_count.to_i > case comparator
+      when :valid_voters
+        recapitulation.administrasi['suara_sah'].to_i
+      when :provisional_voters
+        recapitulation.administrasi['pengguna_total_j'].to_i
+      else
+        max_voters
       end
     end
 
-    def self.data_fraud?(max_voters, recapitulation, president_votes_count, mode)
-      raise 'Invalid Mode for Data Fraud' unless %i[max_voters valid_voters_with_president_votes_count].include?(mode)
-      return president_votes_count.to_i > max_voters if mode == :max_voters
+    def self.recapitulations(query, comparator)
+      recapitulations = Recapitulation.instance_exec(&query)
+      return recapitulations.not(chart: nil) if comparator == :max_voters
 
-      president_votes_count.to_i > recapitulation.administrasi['suara_sah'].to_i
+      recapitulations.not(chart: nil, administrasi: nil)
     end
 
-    def self.recapitulations_by_mode(mode)
-      return recapitulations.where.not(administrasi: nil) if mode == :valid_voters_with_president_votes_count
-
-      recapitulations
-    end
-
-    def self.recapitulations
-      Recapitulation.where.not(chart: nil)
-    end
-
-    private_class_method :data_fraud?, :recapitulations_by_mode, :recapitulations
+    private_class_method :data_fraud?,
+      :recapitulations,
+      :selected_recapitulations,
+      :save_to_db_or_file,
+      :save_to_db,
+      :save_to_file,
+      :saved_name
   end
 end

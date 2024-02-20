@@ -50,8 +50,15 @@ production:
   - [polling_stations_8_crawler, 5]
   - [polling_stations_9_crawler, 5]
   - [polling_stations_10_crawler, 5]
+  - [backup_0_crawler, 7]
+  - [backup_1_crawler, 7]
+  - [backup_2_crawler, 7]
+  - [backup_3_crawler, 7]
+  - [backup_4_crawler, 7]
+  - [backup_5_crawler, 7]
   - recapitulation_runner
   - place_runner
+  - backup_runner
   - critical
   - default
   - low

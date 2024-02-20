@@ -5,12 +5,15 @@ class Province
   include Mongoid::Document
   include Mongoid::Timestamps
   include GlobalID::Identification
+  include DynamicSearchQuery
   include PlaceRelationCreator
 
   field :nama, type: String
   field :kode, type: String
   field :tingkat, type: String
   field :url_path, type: String
+
+  index({ kode: 1 }, { unique: true })
 
   validates_uniqueness_of :kode
 

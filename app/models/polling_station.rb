@@ -5,6 +5,7 @@ class PollingStation
   include Mongoid::Document
   include Mongoid::Timestamps
   include GlobalID::Identification
+  include DynamicSearchQuery
   include RecapitulationRelationCreator
 
   field :nama, type: String
@@ -12,9 +13,11 @@ class PollingStation
   field :tingkat, type: String
   field :url_path, type: String
 
+  index({ kode: 1 }, { unique: true })
+
   validates_uniqueness_of :kode
 
-  belongs_to  :village, inverse_of: :polling_stations
+  belongs_to  :village, inverse_of: :polling_stations, index: true
   has_many    :recapitulations, inverse_of: :polling_station, dependent: :destroy
 
   # after_create :recapitulate_voters!

@@ -5,6 +5,7 @@ class Village
   include Mongoid::Document
   include Mongoid::Timestamps
   include GlobalID::Identification
+  include DynamicSearchQuery
   include PlaceRelationCreator
 
   field :nama, type: String
@@ -12,9 +13,11 @@ class Village
   field :tingkat, type: String
   field :url_path, type: String
 
+  index({ kode: 1 }, { unique: true })
+
   validates_uniqueness_of :kode
 
-  belongs_to  :district, inverse_of: :villages
+  belongs_to  :district, inverse_of: :villages, index: true
   has_many    :polling_stations, inverse_of: :village, dependent: :destroy
 
   after_create :create_polling_stations

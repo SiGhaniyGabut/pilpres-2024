@@ -5,6 +5,7 @@ class State
   include Mongoid::Document
   include Mongoid::Timestamps
   include GlobalID::Identification
+  include DynamicSearchQuery
   include PlaceRelationCreator
 
   field :nama, type: String
@@ -12,9 +13,11 @@ class State
   field :tingkat, type: String
   field :url_path, type: String
 
+  index({ kode: 1 }, { unique: true })
+
   validates_uniqueness_of :kode
 
-  belongs_to  :province, inverse_of: :states
+  belongs_to  :province, inverse_of: :states, index: true
   has_many    :districts, inverse_of: :state, dependent: :destroy
 
   after_create :create_districts

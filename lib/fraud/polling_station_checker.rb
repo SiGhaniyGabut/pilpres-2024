@@ -2,9 +2,18 @@
 
 module Fraud
   class PollingStationChecker
-    def self.check(max_voters = 300, comparator:, sample:, query: -> { all }, detail: true, skip_ids: [], save: false)
+    def self.check(
+      max_voters = 300,
+      comparator:,
+      sample:,
+      query: -> { all },
+      detail: true,
+      skip_ids: [],
+      save: false,
+      use_backup: false
+    )
       # Fetch all recapitulations
-      r13s = recapitulations(query, comparator).limit(sample)
+      r13s = recapitulations(query, comparator, use_backup).limit(sample)
 
       # Fetch all presidents
       presidents = President.where.not(:id.in => skip_ids.map(&:to_s))
@@ -67,7 +76,7 @@ module Fraud
     end
 
     def self.data_fraud?(max_voters, recapitulation, president_votes_count, comparator)
-      raise 'Invalid Fraud Comparator' unless %i[max_voters valid_voters provisional_voters].include?(comparator)
+      raise 'Invalid fraud comparator' unless %i[max_voters valid_voters provisional_voters].include?(comparator)
 
       president_votes_count.to_i > case comparator
       when :valid_voters
@@ -79,15 +88,23 @@ module Fraud
       end
     end
 
-    def self.recapitulations(query, comparator)
-      recapitulations = Recapitulation.instance_exec(&query)
+    def self.recapitulations(query, comparator, use_backup)
+      recapitulations = recapitulation_model(use_backup).instance_exec(&query)
+
       return recapitulations.not(chart: nil) if comparator == :max_voters
 
       recapitulations.not(chart: nil, administrasi: nil)
     end
 
+    def self.recapitulation_model(use_backup)
+      raise 'Invalid backup option.' unless use_backup.eql?(false) || use_backup.is_a?(Hash)
+
+      use_backup.eql?(false) ? Recapitulation : Backup::Recapitulation.where(backup_version: use_backup[:version])
+    end
+
     private_class_method :data_fraud?,
       :recapitulations,
+      :recapitulation_model,
       :selected_recapitulations,
       :save_to_db_or_file,
       :save_to_db,
